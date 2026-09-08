@@ -1,0 +1,6 @@
+streamlit>=1.38
+chromadb>=0.5
+sentence-transformers>=3.0
+pypdf>=4.0
+requests>=2.31
+python-dotenv>=1.0

@@ -1,6 +1,16 @@
-streamlit>=1.38
-chromadb>=0.5
-sentence-transformers>=3.0
-pypdf>=4.0
-requests>=2.31
-python-dotenv>=1.0
+# Pinned to the exact versions verified to work together on Python 3.14 (see README
+# "Environment" section). sentence-transformers pulls in a matching CPU-only torch
+# build automatically as a transitive dependency — do NOT add torch/torchvision here,
+# this app is text-only (no image models), and torchvision is not a runtime requirement.
+streamlit==1.63.0
+chromadb==1.5.9
+sentence-transformers==6.0.1
+pypdf==6.18.0
+requests==2.34.2
+python-dotenv==1.2.2
+
+# Corporate Windows machines doing TLS inspection with an internal root CA break
+# certifi-based SSL verification for huggingface_hub's model-download requests
+# (see README). This patches Python's ssl module to trust the OS certificate
+# store instead, with no code changes. Harmless no-op on macOS/Linux.
+pip-system-certs==5.3 ; sys_platform == "win32"

@@ -159,9 +159,15 @@ elif ask_clicked and question.strip():
     st.subheader("Answer")
     st.markdown(result["answer"])
 
-    st.markdown("**Sources**")
-    for c in result["citations"]:
-        st.markdown(
-            f"[{c['tag']}] {c['source_file']} — {c['location']} "
-            f"(similarity: {c['similarity']:.3f})"
+    if result["citations"]:
+        st.markdown("**Sources**")
+        for c in result["citations"]:
+            st.markdown(
+                f"[{c['tag']}] {c['source_file']} — {c['location']} "
+                f"(similarity: {c['similarity']:.3f})"
+            )
+    else:
+        st.caption(
+            "No sources shown — the model didn't cite any retrieved chunk, "
+            "meaning nothing relevant enough was found in the document."
         )

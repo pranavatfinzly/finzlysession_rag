@@ -20,6 +20,7 @@ emits the bracket number, and we already know what that number maps to.
 """
 
 import os
+import re
 
 import requests
 
@@ -118,10 +119,34 @@ def call_groq(messages: list[dict]) -> str:
     return data["choices"][0]["message"]["content"]
 
 
+def _extract_cited_tags(answer: str) -> set[int]:
+    """Parse which [n] tags the model actually used in its answer text.
+
+    Retrieval always returns its top-k nearest chunks even when none of them
+    are actually relevant (nearest-neighbor search has no "no match" case —
+    see retrieve.py), so `citations` from build_prompt() includes every
+    retrieved chunk regardless of relevance. Without this filter, a refusal
+    like "I don't know based on the provided document." would still show
+    all of those unrelated chunks as if they were its sources.
+    """
+    tags = set()
+    for group in re.findall(r"\[([\d,\s]+)\]", answer):
+        for part in group.split(","):
+            part = part.strip()
+            if part.isdigit():
+                tags.add(int(part))
+    return tags
+
+
 def generate_answer(question: str, retrieved_chunks) -> dict:
     """Full generation step for one query: build the prompt, call the LLM,
     and return {"answer": str, "citations": list[dict]} for app.py to render.
+
+    `citations` only includes chunks the model actually cited inline, not
+    every chunk retrieve.py handed it — see _extract_cited_tags().
     """
     messages, citations = build_prompt(question, retrieved_chunks)
     answer = call_groq(messages)
-    return {"answer": answer, "citations": citations}
+    cited_tags = _extract_cited_tags(answer)
+    cited_citations = [c for c in citations if c["tag"] in cited_tags]
+    return {"answer": answer, "citations": cited_citations}

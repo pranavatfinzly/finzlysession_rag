@@ -40,43 +40,85 @@ other five modules but has no pipeline logic of its own.
 
 ## Setup
 
-```bash
-cd rag-demo
-pip install -r requirements.txt
+Use a project-local virtual environment — don't install into the global/system
+Python. `requirements.txt` is fully pinned to versions verified to work
+together (see "Environment notes" below), so a fresh `.venv` reproduces the
+same working setup every time.
+
+Windows (CMD):
+
+```bat
+cd finzlysession_rag
+py -3.14 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
+
+macOS/Linux:
+
+```bash
+cd finzlysession_rag
+python3 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+`requirements.txt` includes `pip-system-certs` on Windows only (via an
+environment marker). It patches Python's SSL to trust the same certificate
+store Windows/browsers already do — needed on corporate machines that do TLS
+inspection with an internal root CA, which otherwise breaks
+`sentence-transformers`'/`huggingface_hub`'s HTTPS calls with
+`SSL: CERTIFICATE_VERIFY_FAILED` / "unable to get local issuer certificate".
+No code changes needed; harmless no-op on macOS/Linux.
 
 Set `GROQ_API_KEY` either as a real environment variable, or in a `.env`
 file (loaded automatically by `app.py` via `python-dotenv` — never commit
 this file, it's already in `.gitignore`):
 
 ```bash
-# rag-demo/.env
+# .env
 GROQ_API_KEY=your-key-here
 ```
 
+```bat
+REM Windows CMD
+set GROQ_API_KEY=your-key-here
+.venv\Scripts\python.exe -m streamlit run app.py
+```
+
 ```bash
-export GROQ_API_KEY=your-key-here   # Windows PowerShell: $env:GROQ_API_KEY = "your-key-here"
-streamlit run app.py
+# macOS/Linux
+export GROQ_API_KEY=your-key-here
+.venv/bin/python -m streamlit run app.py
 ```
 
 The first run downloads the `all-MiniLM-L6-v2` embedding model
 (~80 MB) — do this once *before* going live, not mid-demo:
 
-```bash
-python -c "from embed import embed_texts; embed_texts(['warm up'])"
+```bat
+.venv\Scripts\python.exe -c "from embed import embed_texts; embed_texts(['warm up'])"
 ```
 
-**If that fails with `SSL: CERTIFICATE_VERIFY_FAILED` / "unable to get local
-issuer certificate":** this is common on corporate Windows machines that do
-TLS inspection with an internal root CA — `curl`/browsers trust it via the
-Windows certificate store, but Python's `requests`/`certifi` don't. Fix:
+## Environment notes
 
-```bash
-pip install pip-system-certs
-```
-
-This makes Python's SSL trust the same certificate store Windows already
-does, with no code changes needed. Re-run the warm-up command above to confirm.
+- **Python 3.14 is supported for this dependency stack** — verified directly:
+  `torch==2.14.0` and `sentence-transformers==6.0.1` both ship official
+  `cp314` wheels, and the full ingest→chunk→embed→store→retrieve pipeline
+  (via `streamlit.testing.v1.AppTest` and a real `streamlit run`) was run
+  end-to-end with zero fatal exceptions. There's no need to fall back to
+  Python 3.12 for this project.
+- **`torchvision` is not a dependency of this app and is not installed.**
+  `embed.py` only loads a text embedding model (`all-MiniLM-L6-v2`) — no
+  image processing anywhere in this codebase. Newer `transformers` releases
+  lazily register image-model processors (nougat, sam, qwen2_vl, etc.) that
+  import `torchvision` on first touch; since this app never touches those
+  code paths, `torchvision` is never needed. If a future
+  `transformers`/`sentence-transformers` upgrade causes Streamlit's
+  local-file watcher to log `ModuleNotFoundError: No module named
+  'torchvision'` while scanning loaded modules, that is a caught, non-fatal
+  warning from an unrelated vision code path — not something this app's
+  runtime depends on. Do not "fix" it by installing `torchvision`; if the
+  noise is undesirable, it's cosmetic only.
 
 **Which LLM model:** `generate.py`'s `GROQ_MODEL` is currently set to
 `openai/gpt-oss-120b`. Groq periodically deprecates older models (this repo

@@ -11,7 +11,7 @@ them and follow exactly what it does.
 ## Architecture
 
 ```
-Upload (app.py)
+Upload (llm.py)
    |
    v
 ingest.py    -> detect file type, extract raw text (per page for PDF)
@@ -35,10 +35,10 @@ retrieve.py  -> embed the query, fetch top-k chunks by cosine similarity
 generate.py  -> build a grounded prompt, call Groq's LLM, format citations
    |
    v
-app.py       -> render retrieved chunks, answer, and citations
+llm.py       -> render retrieved chunks, answer, and citations
 ```
 
-`app.py` contains **only** Streamlit UI code — it imports and calls the
+`llm.py` contains **only** Streamlit UI code — it imports and calls the
 other five modules but has no pipeline logic of its own.
 
 ## Setup
@@ -76,7 +76,7 @@ No code changes needed; harmless no-op on macOS/Linux.
 
 You'll need your own Groq API key (free at [console.groq.com](https://console.groq.com)).
 Set `GROQ_API_KEY` either as a real environment variable, or in a `.env`
-file in the project root (loaded automatically by `app.py` via
+file in the project root (loaded automatically by `llm.py` via
 `python-dotenv` — never commit this file; it's already in `.gitignore`):
 
 ```bash
@@ -89,13 +89,13 @@ Then run the app:
 ```bat
 REM Windows CMD
 set GROQ_API_KEY=your-key-here
-.venv\Scripts\python.exe -m streamlit run app.py
+.venv\Scripts\python.exe -m streamlit run llm.py
 ```
 
 ```bash
 # macOS/Linux
 export GROQ_API_KEY=your-key-here
-.venv/bin/python -m streamlit run app.py
+.venv/bin/python -m streamlit run llm.py
 ```
 
 Streamlit will open the app in your browser automatically. The first run
@@ -194,7 +194,7 @@ citations stay trustworthy:
    location string itself — it only ever echoes back a bracket number it
    was already given.
 4. `generate_answer()` returns `{"answer": ..., "citations": [...]}`
-   untouched, and `app.py` renders the citations list under "Sources"
+   untouched, and `llm.py` renders the citations list under "Sources"
    using the same tags that appear in the answer text.
 
 To trace any citation yourself: find `[n]` in the model's answer, then look

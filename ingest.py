@@ -46,7 +46,7 @@ def validate_file(filename: str, size_bytes: int) -> str:
 
     Returns the lowercase extension on success; raises UnsupportedFileTypeError
     or FileTooLargeError (both plain Exceptions with a user-facing message)
-    otherwise. Called by app.py immediately after upload, before extraction.
+    otherwise. Called by llm.py immediately after upload, before extraction.
     """
     ext = _get_extension(filename)
     if ext not in SUPPORTED_EXTENSIONS:
@@ -66,7 +66,7 @@ def extract_text(filename: str, file_bytes: bytes) -> list[Segment]:
     """Dispatch to the right extractor based on file extension.
 
     Assumes validate_file() has already been called — this raises again
-    for safety, but app.py should never reach here with a bad extension.
+    for safety, but llm.py should never reach here with a bad extension.
     """
     ext = _get_extension(filename)
     if ext == ".pdf":

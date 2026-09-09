@@ -5,7 +5,7 @@ Embeds the user's query with the same model used for the document's chunks
 (embed.py), asks the document's ChromaDB collection for the k nearest
 chunks, and returns them as RetrievedChunk objects carrying the similarity
 score plus the source_file/location metadata that store.py attached at
-index time. app.py renders these directly in the "retrieved chunks" panel,
+index time. llm.py renders these directly in the "retrieved chunks" panel,
 and generate.py consumes the same list to build the prompt and citations.
 """
 

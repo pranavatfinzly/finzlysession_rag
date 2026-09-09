@@ -6,7 +6,7 @@ embedding API, no extra API key beyond the LLM call in generate.py. Trades
 a one-time model download (~80MB, cached after first run) for zero
 per-query cost and one less third-party dependency to explain live.
 
-Both document chunks (embed.py called from app.py at ingest time) and user
+Both document chunks (embed.py called from llm.py at ingest time) and user
 queries (called from retrieve.py) go through embed_texts(), using the same
 model — that's required for cosine similarity between them to mean anything.
 """

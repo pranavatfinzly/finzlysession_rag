@@ -21,7 +21,7 @@ from chromadb.api.models.Collection import Collection
 
 def get_client() -> chromadb.ClientAPI:
     """One in-memory Chroma client per app process, created once and stashed
-    in st.session_state by app.py."""
+    in st.session_state by llm.py."""
     return chromadb.EphemeralClient()
 
 
@@ -33,7 +33,7 @@ def create_collection_for_upload(
     document. If a previous collection name is passed in (i.e. this session
     already had a document indexed), it's deleted first.
 
-    Called once per successful upload, from app.py.
+    Called once per successful upload, from llm.py.
     """
     if previous_collection_name:
         try:

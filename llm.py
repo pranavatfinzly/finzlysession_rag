@@ -1,5 +1,5 @@
 """
-app.py — Streamlit UI.
+llm.py — Streamlit UI.
 
 Wires the pipeline stages together for a live demo:
   upload -> ingest.extract_text -> chunk.chunk_segments -> embed.embed_texts

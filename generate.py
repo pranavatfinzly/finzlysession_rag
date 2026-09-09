@@ -13,7 +13,7 @@ The attachment happens in two places that must stay in sync:
      numbering — so citation tag N always refers to the Nth chunk in
      both places.
   2. generate_answer() returns that same `citations` list untouched
-     alongside the model's answer, so app.py can render "Sources" using
+     alongside the model's answer, so llm.py can render "Sources" using
      the exact tags the model was instructed to cite in its prose.
 The model never invents source_file/location strings itself — it only ever
 emits the bracket number, and we already know what that number maps to.
@@ -140,7 +140,7 @@ def _extract_cited_tags(answer: str) -> set[int]:
 
 def generate_answer(question: str, retrieved_chunks) -> dict:
     """Full generation step for one query: build the prompt, call the LLM,
-    and return {"answer": str, "citations": list[dict]} for app.py to render.
+    and return {"answer": str, "citations": list[dict]} for llm.py to render.
 
     `citations` only includes chunks the model actually cited inline, not
     every chunk retrieve.py handed it — see _extract_cited_tags().

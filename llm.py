@@ -9,6 +9,36 @@ No pipeline logic lives here — every non-trivial step is a call into the
 matching module, so each module can be read (and explained) on its own.
 """
 
+import truststore
+
+truststore.inject_into_ssl()  # use the OS trust store for all SSL, not just certifi's
+# bundled CAs — fixes SSL: CERTIFICATE_VERIFY_FAILED / "couldn't connect to
+# huggingface.co" on corporate networks that do TLS inspection with an
+# internal root CA. Must run before any HTTP client (huggingface_hub, requests)
+# builds its first SSL context, so this import stays first in the file.
+
+import logging
+
+from streamlit.watcher import local_sources_watcher  # noqa: F401
+
+# transformers registers lazy-loaded modules for vision models (SAM, YOLOS,
+# Qwen2-VL, etc.) this app never uses. Streamlit's dev-mode file watcher probes
+# every loaded module's __path__ to decide what to watch for auto-reload, which
+# triggers those modules' lazy imports and fails with "No module named
+# 'torchvision'" (transformers/embed.py never installs torchvision — it's a
+# text-only pipeline). Streamlit already catches that exception per-module
+# (streamlit/watcher/local_sources_watcher.py, get_module_paths) so it can't
+# crash a script run; this only silences the resulting WARNING-level log spam.
+# It does NOT affect real app errors, which Streamlit renders in the browser
+# via a different code path (the ScriptRunner), not this logger.
+#
+# The explicit import above (before setLevel) is required: Streamlit's
+# get_logger() resets a logger's level to Streamlit's global default the
+# first time that logger name is requested, which happens lazily inside
+# Streamlit's own runtime — an override set before that first request would
+# otherwise get silently clobbered.
+logging.getLogger("streamlit.watcher.local_sources_watcher").setLevel(logging.ERROR)
+
 import streamlit as st
 from dotenv import load_dotenv
 

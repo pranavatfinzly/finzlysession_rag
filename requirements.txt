@@ -9,8 +9,10 @@ pypdf==6.18.0
 requests==2.34.2
 python-dotenv==1.2.2
 
-# Corporate Windows machines doing TLS inspection with an internal root CA break
+# Corporate machines doing TLS inspection with an internal root CA break
 # certifi-based SSL verification for huggingface_hub's model-download requests
-# (see README). This patches Python's ssl module to trust the OS certificate
-# store instead, with no code changes. Harmless no-op on macOS/Linux.
-pip-system-certs==5.3 ; sys_platform == "win32"
+# (see README) — huggingface_hub's httpx client builds its SSL context from
+# certifi's bundled CAs, which never include an internal corporate root CA.
+# truststore replaces that with the OS's own trust store (Windows/macOS/Linux),
+# which already trusts the corporate CA. Injected explicitly in llm.py.
+truststore==0.10.4

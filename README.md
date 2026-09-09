@@ -66,13 +66,16 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-`requirements.txt` includes `pip-system-certs` on Windows only (via an
-environment marker). It patches Python's SSL to trust the same certificate
-store Windows/browsers already do — needed on corporate machines that do TLS
-inspection with an internal root CA, which otherwise breaks
-`sentence-transformers`'/`huggingface_hub`'s HTTPS calls with
-`SSL: CERTIFICATE_VERIFY_FAILED` / "unable to get local issuer certificate".
-No code changes needed; harmless no-op on macOS/Linux.
+`requirements.txt` includes `truststore`, and `llm.py` calls
+`truststore.inject_into_ssl()` as its very first line. This makes all SSL
+verification (Windows/macOS/Linux) go through the OS's own trust store
+instead of `certifi`'s bundled CA list — needed on corporate machines that do
+TLS inspection with an internal root CA, which otherwise breaks
+`huggingface_hub`'s model-download requests with
+`SSL: CERTIFICATE_VERIFY_FAILED` or
+`OSError: We couldn't connect to 'https://huggingface.co' ... and couldn't
+find them in the cached files`. Harmless no-op on machines without TLS
+inspection.
 
 You'll need your own Groq API key (free at [console.groq.com](https://console.groq.com)).
 Set `GROQ_API_KEY` either as a real environment variable, or in a `.env`
@@ -102,6 +105,29 @@ Streamlit will open the app in your browser automatically. The first run
 downloads the `all-MiniLM-L6-v2` embedding model (~80 MB), so the first
 upload will take a little longer than later ones.
 
+### Speeding up `pip install`
+
+The first install is genuinely large — `sentence-transformers` pulls in
+`torch` (~125 MB) and `chromadb` pulls in a heavy transitive tree
+(`onnxruntime`, `grpcio`, `opentelemetry-*`, `kubernetes` client, etc.), so
+expect ~1 GB of downloads the very first time. That's inherent to this stack,
+not a bug — but a few things make repeat installs (e.g. recreating `.venv`)
+much faster:
+
+- pip caches every wheel it downloads (`%LOCALAPPDATA%\pip\cache` on
+  Windows). Don't delete this cache between runs — a second `.venv` built
+  from a warm cache installs from disk instead of re-downloading ~1 GB.
+- If you have [`uv`](https://docs.astral.sh/uv/) installed, it's a drop-in,
+  much faster replacement for `pip install` (parallel downloads, faster
+  resolver):
+  ```bash
+  uv pip install --python .venv/Scripts/python.exe --system-certs -r requirements.txt
+  ```
+  `--system-certs` is required on corporate networks doing TLS inspection —
+  unlike the Python-level `truststore` fix used in `llm.py`, `uv` is a
+  separate Rust binary with its own TLS stack that doesn't see the OS trust
+  store by default.
+
 ## Environment notes
 
 - **Python 3.14 is supported for this dependency stack.** `torch==2.14.0`
@@ -110,11 +136,20 @@ upload will take a little longer than later ones.
   There's no need to fall back to Python 3.12 for this project.
 - **`torchvision` is not a dependency of this app and is not installed.**
   `embed.py` only loads a text embedding model (`all-MiniLM-L6-v2`) — no
-  image processing anywhere in this codebase. If you ever see Streamlit log
-  a `ModuleNotFoundError: No module named 'torchvision'` warning while
-  scanning loaded modules, that's a caught, non-fatal warning from an
-  unrelated vision code path — not something this app's runtime depends on.
-  It's safe to ignore; you don't need to install `torchvision` to fix it.
+  image processing anywhere in this codebase. `transformers` (a
+  `sentence-transformers` dependency) registers lazy-loaded modules for
+  vision models (SAM, YOLOS, Qwen2-VL, etc.) that this app never touches;
+  Streamlit's dev-mode file watcher probes every loaded module's `__path__`
+  to decide what to auto-reload on save, which triggers those vision
+  modules' lazy imports and fails with `ModuleNotFoundError: No module named
+  'torchvision'`. Streamlit already catches that exception per-module
+  (`streamlit/watcher/local_sources_watcher.py`) so it can't crash a script
+  run — it's log noise, not an application error. `llm.py` actively
+  silences it (see the `logging.getLogger("streamlit.watcher....")` call
+  near the top of the file) so it doesn't flood the terminal; if you ever
+  see it anyway, it's still safe to ignore, and installing `torchvision`
+  will not make it go away (transformers has vision modules for models this
+  app doesn't use, regardless of whether torchvision is present).
 
 **If the LLM call fails with `model_not_found`:** Groq periodically
 deprecates older models. `generate.py`'s `GROQ_MODEL` is currently set to

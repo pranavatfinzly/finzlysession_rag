@@ -173,7 +173,7 @@ elif ask_clicked and question.strip():
         for i, chunk in enumerate(retrieved_chunks, start=1):
             st.markdown(
                 f"**[{i}] {chunk.source_file} — {chunk.location}**  "
-                f"·  similarity: `{chunk.similarity:.3f}`"
+                f"·  cosine similarity: `{chunk.similarity:.4f}`"
             )
             preview = chunk.text[:500] + ("..." if len(chunk.text) > 500 else "")
             st.text(preview)
@@ -194,7 +194,7 @@ elif ask_clicked and question.strip():
         for c in result["citations"]:
             st.markdown(
                 f"[{c['tag']}] {c['source_file']} — {c['location']} "
-                f"(similarity: {c['similarity']:.3f})"
+                f"(cosine similarity: {c['similarity']:.4f})"
             )
     else:
         st.caption(

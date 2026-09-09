@@ -3,7 +3,7 @@ chunk.py — Fixed-size chunking with overlap.
 
 Splits each extracted Segment (see ingest.py) into overlapping, fixed-size
 chunks, and stamps every chunk with the source filename and a precise
-location (e.g. "page 2, word 340"). That (source_file, location) pair is
+location (e.g. "page 2, words 341-390"). That (source_file, location) pair is
 carried all the way through embed.py -> store.py -> retrieve.py and is what
 generate.py turns into a numbered citation in the final answer — this file
 is where that traceability starts.
@@ -27,7 +27,7 @@ DEFAULT_OVERLAP = 50       # words shared between consecutive chunks
 class Chunk:
     text: str
     source_file: str
-    location: str      # e.g. "page 2, word 340" or "file, word 1200"
+    location: str      # e.g. "page 2, words 341-390" or "file, words 1-500" (1-based, inclusive)
     chunk_index: int    # 0-based position of this chunk within the document, used as its storage id
 
 
@@ -63,7 +63,11 @@ def chunk_segments(
         while start < len(words):
             window = words[start:start + chunk_size]
             chunk_text = " ".join(window)
-            location = f"{segment.location}, word {start}"
+            # 1-based, inclusive word range (not the 0-based start offset alone) so a
+            # citation identifies the chunk's full span, e.g. "words 1-243" for a
+            # short document that fits in a single chunk, rather than just "word 0"
+            # (easily misread as "zero words" instead of "starts at word index 0").
+            location = f"{segment.location}, words {start + 1}-{start + len(window)}"
 
             chunks.append(Chunk(
                 text=chunk_text,
